@@ -160,3 +160,163 @@ Add-Migration UpdateEmployeeTable
 # Use Package Manager Console
 Update-Database LastGoodMigrationName
 ```
+
+
+
+# Entity Framework Core - Migration Execution and Database Management
+
+## Migration Files Structure
+
+```
+ProjectName/
+├── Migrations/
+│   ├── YYYYMMDDHHMMSS_InitialCreate.cs        # Generated migration
+│   ├── InitialCreate.CustomLogic.cs           # Custom partial class (optional)
+│   └── CompanyDbContextModelSnapshot.cs       # Current model state
+```
+
+## Migration Class Structure
+
+```csharp
+public partial class InitialCreate : Migration
+{
+    protected override void Up(MigrationBuilder migrationBuilder)
+    {
+        // Creates tables only (not database)
+        migrationBuilder.CreateTable(
+            name: "Employees",
+            columns: table => new table
+            {
+                // Column definitions
+            });
+    }
+
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        // Drops tables only (not database)
+        migrationBuilder.DropTable(
+            name: "Employees");
+    }
+}
+```
+
+## Applying Migrations
+
+### Method 1: Programmatic Approach
+```csharp
+// In Program.cs
+using var dbContext = new CompanyDbContext();
+dbContext.Database.Migrate();  // Applies all pending migrations
+```
+
+### Method 2: Package Manager Console (Recommended)
+```powershell
+Update-Database
+```
+
+```mermaid
+graph TD
+    A[Update-Database Command] --> B[Check Pending Migrations]
+    B --> C[Create Database if Needed]
+    C --> D[Execute Up Methods]
+    D --> E[Record in __EFMigrationsHistory]
+    style D fill:#f9f,stroke:#333,stroke-width:4px
+```
+
+## Database Creation Process
+
+1. **First Migration Execution**
+   - EF Core creates database
+   - Executes Up method
+   - Creates required tables
+
+2. **Subsequent Migrations**
+   - Only executes Up method
+   - Modifies existing schema
+   - Database remains intact
+
+## Generated Database Structure
+
+### System Tables
+```mermaid
+erDiagram
+    __EFMigrationsHistory {
+        string MigrationId PK
+        string ProductVersion
+    }
+    Employees {
+        int Id PK
+        string Name
+        double Salary
+        int Age
+    }
+```
+
+### 1. __EFMigrationsHistory Table
+- Tracks applied migrations
+- Contains:
+  - MigrationId (Timestamp_MigrationName)
+  - ProductVersion (EF Tools version)
+- Ensures unique migrations
+
+### 2. Entity Tables
+- Generated from entity classes
+- Follow defined schema
+- Include constraints and relationships
+
+## Monitoring and Debugging
+
+### SQL Server Profiler
+- Tracks executed SQL queries
+- Shows migration commands
+- Useful for development debugging
+
+### Management Studio View
+- Verify database creation
+- Check table structures
+- Monitor migration history
+
+## Best Practices
+
+1. **Migration Management**
+   - Use Package Manager Console for migrations
+   - Keep migrations small and focused
+   - Review generated SQL before applying
+
+2. **Partial Classes**
+   - Don't modify generated migration files
+   - Use partial classes for custom logic
+   - Keep custom logic separate
+
+3. **Version Control**
+   - Include migrations in source control
+   - Document significant changes
+   - Track EF Tools version used
+
+4. **Monitoring**
+   - Review migration history
+   - Check database schema
+   - Validate data integrity
+
+## Common Commands and Operations
+
+```powershell
+# Apply all pending migrations
+Update-Database
+
+# Roll back to specific migration
+Update-Database MigrationName
+
+# Generate SQL script
+Script-Migration
+
+# Remove last migration (if not applied)
+Remove-Migration
+```
+
+## Migration History Table Example
+```sql
+SELECT MigrationId, ProductVersion
+FROM __EFMigrationsHistory
+ORDER BY MigrationId
+```
