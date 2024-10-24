@@ -320,3 +320,184 @@ SELECT MigrationId, ProductVersion
 FROM __EFMigrationsHistory
 ORDER BY MigrationId
 ```
+
+
+# Entity Framework Core - Advanced Migration Management
+
+## Handling Schema Changes
+
+### Example: Renaming Column
+```csharp
+// Original
+public string Name { get; set; }
+
+// Changed to
+public string EmpName { get; set; }
+```
+
+```mermaid
+sequenceDiagram
+    participant Code
+    participant Migration
+    participant Database
+    Code->>Migration: Add-Migration ChangeEmployeeNameColumn
+    Migration->>Database: Update-Database
+    Note over Migration: Compares snapshot with current code
+    Note over Database: Renames column Name to EmpName
+```
+
+## Migration Commands
+
+### Adding New Migrations
+```powershell
+# Generate migration for column rename
+Add-Migration ChangeEmployeeNameColumn
+```
+
+Generated Migration:
+```csharp
+public partial class ChangeEmployeeNameColumn : Migration
+{
+    protected override void Up(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.RenameColumn(
+            name: "Name",
+            table: "Employees",
+            newName: "EmpName");
+    }
+
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.RenameColumn(
+            name: "EmpName",
+            table: "Employees",
+            newName: "Name");
+    }
+}
+```
+
+## Migration Management Flow
+
+```mermaid
+graph TD
+    A[Migration Stack] --> B{Applied?}
+    B -->|Yes| C[Update-Database]
+    B -->|No| D[Remove-Migration]
+    C --> E[Roll Back]
+    E --> D
+    style B fill:#f9f,stroke:#333,stroke-width:4px
+```
+
+## Removing Migrations
+
+### 1. Unapplied Migrations
+```powershell
+# Removes last unapplied migration
+Remove-Migration
+```
+
+### 2. Applied Migrations
+Step 1: Roll back to previous migration
+```powershell
+# Roll back to specific migration
+Update-Database -Migration "PreviousMigrationName"
+```
+
+Step 2: Remove rolled back migration
+```powershell
+Remove-Migration
+```
+
+## Rolling Back Migrations
+
+### To Specific Migration
+```powershell
+# Roll back to InitialCreate
+Update-Database -Migration "InitialCreate"
+```
+
+### Remove All Migrations
+```powershell
+# Roll back all migrations
+Update-Database 0
+
+# Remove migration files
+Remove-Migration
+```
+
+## Migration Stack Behavior
+
+```mermaid
+graph TD
+    A[Migration3] --> B[Migration2]
+    B --> C[Migration1]
+    C --> D[InitialCreate]
+    style A fill:#f9f,stroke:#333,stroke-width:4px
+```
+
+### Rules for Removal
+1. Can only remove latest migration
+2. Must roll back applied migrations first
+3. Snapshot updates automatically
+4. Stack-like behavior (LIFO)
+
+## Common Scenarios
+
+### Scenario 1: Remove Last Unapplied Migration
+```powershell
+Remove-Migration
+```
+
+### Scenario 2: Remove Multiple Migrations
+```powershell
+# Remove Migration3 and Migration2
+Remove-Migration  # Removes Migration3
+Remove-Migration  # Removes Migration2
+```
+
+### Scenario 3: Remove Applied Migration
+```powershell
+# Roll back to previous migration
+Update-Database -Migration "Migration1"
+
+# Remove rolled back migration
+Remove-Migration
+```
+
+### Scenario 4: Complete Reset
+```powershell
+# Remove all migrations
+Update-Database 0
+Remove-Migration
+```
+
+## Best Practices
+
+1. **Before Removing Migrations**
+   - Check if migration is applied
+   - Back up database if needed
+   - Document changes
+
+2. **Rolling Back**
+   - Test rollback in development
+   - Plan for data preservation
+   - Consider dependencies
+
+3. **Migration Management**
+   - Keep migrations small
+   - Regular cleanup of unused migrations
+   - Maintain migration history
+
+4. **Error Prevention**
+   - Verify current database state
+   - Check for dependent migrations
+   - Test rollback procedures
+
+## Common Issues and Solutions
+
+| Issue | Solution |
+|-------|----------|
+| Migration already applied | Roll back first using Update-Database |
+| Cannot remove middle migration | Roll back and remove in order |
+| Snapshot out of sync | Remove unapplied migrations |
+| Database inconsistency | Use Update-Database 0 to reset |
